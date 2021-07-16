@@ -1,0 +1,8 @@
+FROM scratch
+
+ARG EXECUTABLE=./mautrix-syncproxy
+COPY $EXECUTABLE /usr/bin/mautrix-syncproxy
+
+ENV LISTEN_ADDRESS=:29332
+
+CMD ["/usr/bin/mautrix-syncproxy", "-config", "env"]
