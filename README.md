@@ -28,6 +28,8 @@ you can build from source:
 Configuring is done via environment variables.
 
 * `LISTEN_ADDRESS` - The address where to listen.
+* `HOMESERVER_URL` - The address to Synapse. If using workers, it is sufficient
+  to have access to the `GET /sync` and `POST /user/{userId}/filter` endpoints.
 * `DATABASE_URL` - Database for storing sync tokens. SQLite and Postgres are
   supported: `sqlite:///mautrix-syncproxy.db` or `postgres://user:pass@host/db`
 * `SHARED_SECRET` - The shared secret for adding new sync targets.
