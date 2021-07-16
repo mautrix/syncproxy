@@ -8,9 +8,31 @@ to significantly reduce battery usage of the persistent foreground process
 (an idle websocket doesn't take much battery, but a HTTP request every 30
 seconds does).
 
-This implements [MSC3202] and the to-device part of [MSC2409].
+This partially implements [MSC3202] and the to-device part of [MSC2409].
 
 [MSC2409]: https://github.com/matrix-org/matrix-doc/pull/2409
 [MSC3202]: https://github.com/matrix-org/matrix-doc/pull/3202
-[mautrix-wsproxy]: https://github.com/tulir/mautrix-wsproxy
 [android-sms]: https://gitlab.com/beeper/android-sms
+[mautrix-wsproxy]: https://github.com/tulir/mautrix-wsproxy
+
+## Setup
+You can download a prebuilt executable from [the CI] or [GitHub releases]. The
+executables are statically compiled and have no dependencies. Alternatively,
+you can build from source:
+
+0. Have [Go](https://golang.org/) 1.15 or higher installed.
+1. Clone the repository (`git clone https://github.com/tulir/mautrix-syncproxy.git`).
+2. Build with `go build`. The resulting executable will be in the current
+   directory named `mautrix-syncproxy`.
+
+Configuring is done via environment variables.
+
+* `LISTEN_ADDRESS` - The address where to listen.
+* `DATABASE_URL` - Database for storing sync tokens. SQLite and Postgres are
+  supported: `sqlite:///mautrix-syncproxy.db` or `postgres://user:pass@host/db`
+* `SHARED_SECRET` - The shared secret for adding new sync targets.
+  You should generate a random string here, e.g. `pwgen -snc 50 1`
+* `DEBUG` - If set, debug logs will be enabled.
+
+Since this is most useful with mautrix-wsproxy, the docker-compose instructions
+can be found in the [mautrix-wsproxy] readme.
