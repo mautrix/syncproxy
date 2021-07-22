@@ -35,6 +35,7 @@ import (
 )
 
 const txnIDFormat = "fi.mau.syncproxy_%d_%d"
+const wrapperTxnIDFormat = "fi.mau.syncproxy.wrapper_%d_%d"
 
 const initialTransactionRetrySleep = 2 * time.Second
 const maxTransactionRetryInterval = 120 * time.Second
@@ -69,15 +70,15 @@ type transactionResponse struct {
 
 var lastTxnID uint64
 
-func nextTxnID() (uint64, string) {
+func nextTxnID(format string) (uint64, string) {
 	txnIDCounter := atomic.AddUint64(&lastTxnID, 1)
-	return txnIDCounter, fmt.Sprintf(txnIDFormat,
+	return txnIDCounter, fmt.Sprintf(format,
 		time.Now().UnixNano(),
 		txnIDCounter)
 }
 
 func (target *SyncTarget) tryPostTransaction(ctx context.Context, txn *appservice.Transaction, error ProxyError, retry bool) error {
-	counter, txnID := nextTxnID()
+	counter, txnID := nextTxnID(txnIDFormat)
 	txnLog := ctx.Value(logContextKey).(maulogger.Logger).Sub(fmt.Sprintf("Txn-%d", counter))
 	ctx = context.WithValue(ctx, logContextKey, txnLog)
 
@@ -149,7 +150,7 @@ func (target *SyncTarget) postTransaction(ctx context.Context, txn *appservice.T
 
 	pathTxnID := txnID
 	if target.IsProxy {
-		_, pathTxnID = nextTxnID()
+		_, pathTxnID = nextTxnID(wrapperTxnIDFormat)
 	}
 	txnLog.Debugfln("Attempt #%d for transaction %s (path: %s)", attemptNo, txnID, pathTxnID)
 
