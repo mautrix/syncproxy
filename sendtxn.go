@@ -82,12 +82,16 @@ func (target *SyncTarget) tryPostTransaction(ctx context.Context, txn *appservic
 	txnLog := ctx.Value(logContextKey).(maulogger.Logger).Sub(fmt.Sprintf("Txn-%d", counter))
 	ctx = context.WithValue(ctx, logContextKey, txnLog)
 
-	deviceListChanges := 0
-	if txn.DeviceLists != nil {
-		deviceListChanges = len(txn.DeviceLists.Changed)
+	if txn != nil {
+		deviceListChanges := 0
+		if txn.DeviceLists != nil {
+			deviceListChanges = len(txn.DeviceLists.Changed)
+		}
+		txnLog.Debugfln("Sending %d to-device events, %d device list changes and %d OTK counts to %s in transaction %s",
+			len(txn.EphemeralEvents), deviceListChanges, len(txn.DeviceOTKCount), target.AppserviceID, txnID)
+	} else {
+		txnLog.Debugfln("Sending error '%s' to %s in transaction %s", error, target.AppserviceID, txnID)
 	}
-	txnLog.Debugfln("Sending %d to-device events, %d device list changes and %d OTK counts to %s in transaction %s",
-		len(txn.EphemeralEvents), deviceListChanges, len(txn.DeviceOTKCount), target.AppserviceID, txnID)
 
 	retryIn := initialTransactionRetrySleep
 	attemptNo := 1
