@@ -82,6 +82,11 @@ func startSync(w http.ResponseWriter, r *http.Request) {
 			target.Address = req.Address
 			target.UserID = req.UserID
 			target.DeviceID = req.DeviceID
+			if target.client != nil {
+				target.client.AccessToken = target.BotAccessToken
+				target.client.UserID = target.UserID
+				target.client.DeviceID = target.DeviceID
+			}
 		} else {
 			changed = false
 		}
