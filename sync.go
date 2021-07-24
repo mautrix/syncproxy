@@ -86,7 +86,7 @@ func (target *SyncTarget) sync(ctx context.Context) error {
 		}
 		retryIn = initialTransactionRetrySleep
 		if len(resp.ToDevice.Events) > 0 || resp.DeviceOTKCount != prevOTKCount || !otkCountSent || len(resp.DeviceLists.Changed) > 0 {
-			txn := syncToTransaction(resp, target.UserID, target.DeviceID, prevOTKCount)
+			txn := syncToTransaction(resp, target.UserID, target.DeviceID, resp.DeviceOTKCount != prevOTKCount || !otkCountSent)
 			prevOTKCount = resp.DeviceOTKCount
 			otkCountSent = true
 			err = target.tryPostTransaction(ctx, txn, "", true)
@@ -102,7 +102,7 @@ func (target *SyncTarget) sync(ctx context.Context) error {
 	}
 }
 
-func syncToTransaction(resp *mautrix.RespSync, userID id.UserID, deviceID id.DeviceID, prevOTKCount mautrix.OTKCount) *appservice.Transaction {
+func syncToTransaction(resp *mautrix.RespSync, userID id.UserID, deviceID id.DeviceID, sendOTKs bool) *appservice.Transaction {
 	var txn appservice.Transaction
 	if resp != nil {
 		if len(resp.ToDevice.Events) > 0 {
@@ -117,7 +117,7 @@ func syncToTransaction(resp *mautrix.RespSync, userID id.UserID, deviceID id.Dev
 			txn.DeviceLists = &resp.DeviceLists
 			txn.MSC3202DeviceLists = txn.DeviceLists
 		}
-		if resp.DeviceOTKCount != prevOTKCount {
+		if sendOTKs {
 			txn.DeviceOTKCount = map[id.UserID]mautrix.OTKCount{
 				userID: resp.DeviceOTKCount,
 			}
