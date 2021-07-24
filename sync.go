@@ -55,6 +55,7 @@ func (target *SyncTarget) sync(ctx context.Context) error {
 		filterID = resp.FilterID
 	}
 
+	var otkCountSent bool
 	var prevOTKCount mautrix.OTKCount
 	syncLog := ctx.Value(logContextKey).(maulogger.Logger)
 	retryIn := initialSyncRetrySleep
@@ -84,9 +85,10 @@ func (target *SyncTarget) sync(ctx context.Context) error {
 			continue
 		}
 		retryIn = initialTransactionRetrySleep
-		if len(resp.ToDevice.Events) > 0 || resp.DeviceOTKCount != prevOTKCount || len(resp.DeviceLists.Changed) > 0 {
+		if len(resp.ToDevice.Events) > 0 || resp.DeviceOTKCount != prevOTKCount || !otkCountSent || len(resp.DeviceLists.Changed) > 0 {
 			txn := syncToTransaction(resp, target.UserID, target.DeviceID, prevOTKCount)
 			prevOTKCount = resp.DeviceOTKCount
+			otkCountSent = true
 			err = target.tryPostTransaction(ctx, txn, "", true)
 			if err != nil {
 				return fmt.Errorf("error sending transaction: %w", err)
