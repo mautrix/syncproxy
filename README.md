@@ -13,7 +13,7 @@ This partially implements [MSC3202] and the to-device part of [MSC2409].
 [MSC2409]: https://github.com/matrix-org/matrix-doc/pull/2409
 [MSC3202]: https://github.com/matrix-org/matrix-doc/pull/3202
 [android-sms]: https://gitlab.com/beeper/android-sms
-[mautrix-wsproxy]: https://github.com/tulir/mautrix-wsproxy
+[mautrix-wsproxy]: https://github.com/mautrix/wsproxy
 
 ## Setup
 You can download a prebuilt executable from [the CI] or [GitHub releases]. The
@@ -21,9 +21,9 @@ executables are statically compiled and have no dependencies. Alternatively,
 you can build from source:
 
 0. Have [Go](https://golang.org/) 1.15 or higher installed.
-1. Clone the repository (`git clone https://github.com/tulir/mautrix-syncproxy.git`).
-2. Build with `go build`. The resulting executable will be in the current
-   directory named `mautrix-syncproxy`.
+1. Clone the repository (`git clone https://github.com/mautrix/syncproxy.git`).
+2. Build with `go build -o mautrix-syncproxy`. The resulting executable will be
+   in the current directory named `mautrix-syncproxy`.
 
 Configuring is done via environment variables.
 
