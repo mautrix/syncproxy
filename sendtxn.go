@@ -43,12 +43,6 @@ const maxTransactionRetryInterval = 120 * time.Second
 var errFiMauWsNotConnected = mautrix.RespError{ErrCode: "FI.MAU.WS_NOT_CONNECTED"}
 var errWebsocketNotConnected = fmt.Errorf("server said the transaction websocket is not connected")
 
-type ProxyError string
-
-const (
-	ProxyErrorUnknownToken ProxyError = "client-logged-out"
-)
-
 type SendStatus string
 
 const (
@@ -58,9 +52,21 @@ const (
 
 type transactionRequest struct {
 	*appservice.Transaction
-	WrappedTxnID  string     `json:"fi.mau.syncproxy.transaction_id,omitempty"`
-	ProxyError    ProxyError `json:"fi.mau.syncproxy.error,omitempty"`
-	SynchronousTo []string   `json:"com.beeper.asmux.synchronous_to,omitempty"`
+	WrappedTxnID  string   `json:"fi.mau.syncproxy.transaction_id,omitempty"`
+	SynchronousTo []string `json:"com.beeper.asmux.synchronous_to,omitempty"`
+}
+
+type ProxyError string
+
+const (
+	ProxyErrorLoggedOut ProxyError = "FI.MAU.CLIENT_LOGGED_OUT"
+	ProxyErrorUnknown   ProxyError = "M_UNKNOWN"
+)
+
+type errorRequest struct {
+	Error        ProxyError `json:"errcode"`
+	Message      string     `json:"error"`
+	WrappedTxnID string     `json:"fi.mau.syncproxy.transaction_id,omitempty"`
 }
 
 type transactionResponse struct {
@@ -77,7 +83,7 @@ func nextTxnID(format string) (uint64, string) {
 		txnIDCounter)
 }
 
-func (target *SyncTarget) tryPostTransaction(ctx context.Context, txn *appservice.Transaction, error ProxyError, retry bool) error {
+func (target *SyncTarget) tryPostTransaction(ctx context.Context, txn *appservice.Transaction, error *errorRequest) error {
 	counter, txnID := nextTxnID(txnIDFormat)
 	txnLog := ctx.Value(logContextKey).(maulogger.Logger).Sub(fmt.Sprintf("Txn-%d", counter))
 	ctx = context.WithValue(ctx, logContextKey, txnLog)
@@ -90,7 +96,7 @@ func (target *SyncTarget) tryPostTransaction(ctx context.Context, txn *appservic
 		txnLog.Debugfln("Sending %d to-device events, %d device list changes and %d OTK counts to %s in transaction %s",
 			len(txn.EphemeralEvents), deviceListChanges, len(txn.DeviceOTKCount), target.AppserviceID, txnID)
 	} else {
-		txnLog.Debugfln("Sending error '%s' to %s in transaction %s", error, target.AppserviceID, txnID)
+		txnLog.Debugfln("Sending error '%s' to %s in transaction %s", error.Error, target.AppserviceID, txnID)
 	}
 
 	retryIn := initialTransactionRetrySleep
@@ -108,8 +114,6 @@ func (target *SyncTarget) tryPostTransaction(ctx context.Context, txn *appservic
 		} else if errors.Is(err, errWebsocketNotConnected) {
 			// Assume that the server will ask as to restart syncing when the websocket does connect again.
 			return err
-		} else if !retry {
-			return err
 		}
 
 		txnLog.Warnfln("Failed to send transaction %s: %v. Retrying in %v", txnID, err, retryIn)
@@ -126,12 +130,19 @@ func (target *SyncTarget) tryPostTransaction(ctx context.Context, txn *appservic
 	}
 }
 
-func createTxnURL(address, txnID string) (string, error) {
+func createTxnURL(address, appserviceID, txnID string, isError bool) (string, error) {
 	parsedURL, err := url.Parse(address)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse target URL: %w", err)
 	}
-	parsedURL.Path = fmt.Sprintf("/_matrix/app/v1/transactions/%s", txnID)
+	if isError {
+		parsedURL.Path = fmt.Sprintf("/_matrix/app/unstable/fi.mau.syncproxy/error/%s", txnID)
+	} else {
+		parsedURL.Path = fmt.Sprintf("/_matrix/app/v1/transactions/%s", txnID)
+	}
+	q := parsedURL.Query()
+	q.Add("appservice_id", appserviceID)
+	parsedURL.RawQuery = q.Encode()
 	return parsedURL.String(), nil
 }
 
@@ -139,17 +150,22 @@ func closeBody(body io.ReadCloser) {
 	_ = body.Close()
 }
 
-func (target *SyncTarget) postTransaction(ctx context.Context, txn *appservice.Transaction, error ProxyError, txnID string, attemptNo int) error {
+func (target *SyncTarget) postTransaction(ctx context.Context, txn *appservice.Transaction, error *errorRequest, txnID string, attemptNo int) error {
 	txnLog := ctx.Value(logContextKey).(maulogger.Logger)
 	var buf bytes.Buffer
 	var req *http.Request
 	var resp *http.Response
 	var respData transactionResponse
-	txnData := &transactionRequest{
-		Transaction:   txn,
-		WrappedTxnID:  txnID,
-		ProxyError:    error,
-		SynchronousTo: []string{target.AppserviceID},
+	var txnData interface{}
+	if txn != nil {
+		txnData = &transactionRequest{
+			Transaction:   txn,
+			WrappedTxnID:  txnID,
+			SynchronousTo: []string{target.AppserviceID},
+		}
+	} else {
+		error.WrappedTxnID = txnID
+		txnData = error
 	}
 
 	pathTxnID := txnID
@@ -158,7 +174,7 @@ func (target *SyncTarget) postTransaction(ctx context.Context, txn *appservice.T
 	}
 	txnLog.Debugfln("Attempt #%d for transaction %s (path: %s)", attemptNo, txnID, pathTxnID)
 
-	if txnURL, err := createTxnURL(target.Address, pathTxnID); err != nil {
+	if txnURL, err := createTxnURL(target.Address, target.AppserviceID, pathTxnID, error != nil); err != nil {
 		return fmt.Errorf("failed to form transaction URL: %w", err)
 	} else if err = json.NewEncoder(&buf).Encode(txnData); err != nil {
 		return fmt.Errorf("failed to encode transaction JSON: %w", err)
@@ -180,7 +196,7 @@ func (target *SyncTarget) postTransaction(ctx context.Context, txn *appservice.T
 			return fmt.Errorf("transaction returned HTTP %d: %w", resp.StatusCode, err)
 		}
 	} else if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
-		return fmt.Errorf("transaction returned HTTP %d, but had non-JSON body", resp.StatusCode)
+		return fmt.Errorf("transaction returned HTTP %d, but had non-JSON body: %v", resp.StatusCode, err)
 	} else if !respData.Synchronous && cfg.ExpectSynchronous {
 		return fmt.Errorf("transaction returned HTTP %d, but EXPECT_SYNCHRONOUS is set and server didn't confirm support for synchronous delivery", resp.StatusCode)
 	} else if respData.Synchronous && respData.SentTo == nil {

@@ -177,7 +177,18 @@ func (target *SyncTarget) Start() {
 	if errors.Is(err, context.Canceled) {
 		syncLog.Infoln("Syncing stopped")
 	} else if err != nil {
-		syncLog.Errorln("Syncing failed:", err)
+		syncLog.Errorfln("Syncing failed: %v, notifying target...", err)
+		proxyErr := &errorRequest{
+			Error:   ProxyErrorUnknown,
+			Message: err.Error(),
+		}
+		if errors.Is(err, mautrix.MUnknownToken) {
+			proxyErr.Error = ProxyErrorLoggedOut
+		}
+		err = target.tryPostTransaction(ctx, nil, proxyErr)
+		if err != nil {
+			syncLog.Warnln("Failed to notify target about sync error:", err)
+		}
 	}
 }
 

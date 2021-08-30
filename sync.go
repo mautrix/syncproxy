@@ -64,7 +64,7 @@ func (target *SyncTarget) sync(ctx context.Context) error {
 		resp, err := target.client.SyncRequest(30000, target.NextBatch, filterID, false, event.PresenceOffline, ctx)
 		if err != nil {
 			if errors.Is(err, mautrix.MUnknownToken) {
-				err = target.tryPostTransaction(ctx, nil, ProxyErrorUnknownToken, false)
+				return err
 			} else if ctx.Err() != nil {
 				if err != ctx.Err() {
 					syncLog.Debugfln("Sync returned error %v, but context had different error %v", err, ctx.Err())
@@ -89,7 +89,7 @@ func (target *SyncTarget) sync(ctx context.Context) error {
 			txn := syncToTransaction(resp, target.UserID, target.DeviceID, resp.DeviceOTKCount != prevOTKCount || !otkCountSent)
 			prevOTKCount = resp.DeviceOTKCount
 			otkCountSent = true
-			err = target.tryPostTransaction(ctx, txn, "", true)
+			err = target.tryPostTransaction(ctx, txn, nil)
 			if err != nil {
 				return fmt.Errorf("error sending transaction: %w", err)
 			}
