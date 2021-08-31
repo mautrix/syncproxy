@@ -20,7 +20,10 @@ You can download a prebuilt executable from [the CI] or [GitHub releases]. The
 executables are statically compiled and have no dependencies. Alternatively,
 you can build from source:
 
-0. Have [Go](https://golang.org/) 1.15 or higher installed.
+[the CI]: https://mau.dev/mautrix/syncproxy/-/pipelines
+[GitHub releases]: https://github.com/mautrix/syncproxy/releases
+
+0. Have [Go](https://golang.org/) 1.16 or higher installed.
 1. Clone the repository (`git clone https://github.com/mautrix/syncproxy.git`).
 2. Build with `go build -o mautrix-syncproxy`. The resulting executable will be
    in the current directory named `mautrix-syncproxy`.
