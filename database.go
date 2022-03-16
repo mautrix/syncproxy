@@ -34,15 +34,20 @@ type Database struct {
 }
 
 var knownSchemes = map[string]string{
-	"sqlite": "sqlite3",
-	"sqlite3": "sqlite3",
-	"postgres": "pgx",
+	"sqlite":     "sqlite3",
+	"sqlite3":    "sqlite3",
+	"postgres":   "pgx",
 	"postgresql": "pgx",
-	"pgx": "pgx",
+	"pgx":        "pgx",
+}
+
+type DatabaseOpts struct {
+	MaxOpenConns int `yaml:"max_open_conns"`
+	MaxIdleConns int `yaml:"max_idle_conns"`
 }
 
 // Connect creates a new pgx connection pool.
-func Connect(dbURL string) (*Database, error) {
+func Connect(dbURL string, opts DatabaseOpts) (*Database, error) {
 	var localDB Database
 	parsedURL, err := url.Parse(dbURL)
 	if err != nil {
@@ -61,6 +66,8 @@ func Connect(dbURL string) (*Database, error) {
 		dbURL = newDBURL
 	}
 	localDB.conn, err = sql.Open(localDB.scheme, dbURL)
+	localDB.conn.SetMaxOpenConns(opts.MaxOpenConns)
+	localDB.conn.SetMaxIdleConns(opts.MaxIdleConns)
 	return &localDB, err
 }
 

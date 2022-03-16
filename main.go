@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -36,14 +37,30 @@ type Config struct {
 	SharedSecret      string `yaml:"shared_secret"`
 	ExpectSynchronous bool   `yaml:"expect_synchronous"`
 	Debug             bool   `yaml:"debug"`
+
+	DatabaseOpts DatabaseOpts `yaml:"database_opts"`
 }
 
 var cfg Config
 var db *Database
 
+func getIntEnv(key string, defVal int) int {
+	strVal, ok := os.LookupEnv(key)
+	if !ok {
+		return defVal
+	}
+	val, err := strconv.Atoi(strVal)
+	if err != nil {
+		return defVal
+	}
+	return val
+}
+
 func readConfig() {
 	cfg.ListenAddress = os.Getenv("LISTEN_ADDRESS")
 	cfg.DatabaseURL = os.Getenv("DATABASE_URL")
+	cfg.DatabaseOpts.MaxOpenConns = getIntEnv("DATABASE_MAX_OPEN_CONNS", 4)
+	cfg.DatabaseOpts.MaxIdleConns = getIntEnv("DATABASE_MAX_IDLE_CONNS", 0)
 	cfg.HomeserverURL = os.Getenv("HOMESERVER_URL")
 	cfg.SharedSecret = os.Getenv("SHARED_SECRET")
 	cfg.ExpectSynchronous = len(os.Getenv("EXPECT_SYNCHRONOUS")) > 0
@@ -70,7 +87,7 @@ func main() {
 	if cfg.Debug {
 		log.DefaultLogger.PrintLevel = log.LevelDebug.Severity
 	}
-	if localDB, err := Connect(cfg.DatabaseURL); err != nil {
+	if localDB, err := Connect(cfg.DatabaseURL, cfg.DatabaseOpts); err != nil {
 		log.Fatalln("Failed to connect to database:", err)
 		os.Exit(3)
 	} else {
