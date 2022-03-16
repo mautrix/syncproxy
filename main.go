@@ -60,7 +60,7 @@ func readConfig() {
 	cfg.ListenAddress = os.Getenv("LISTEN_ADDRESS")
 	cfg.DatabaseURL = os.Getenv("DATABASE_URL")
 	cfg.DatabaseOpts.MaxOpenConns = getIntEnv("DATABASE_MAX_OPEN_CONNS", 4)
-	cfg.DatabaseOpts.MaxIdleConns = getIntEnv("DATABASE_MAX_IDLE_CONNS", 0)
+	cfg.DatabaseOpts.MaxIdleConns = getIntEnv("DATABASE_MAX_IDLE_CONNS", 2)
 	cfg.HomeserverURL = os.Getenv("HOMESERVER_URL")
 	cfg.SharedSecret = os.Getenv("SHARED_SECRET")
 	cfg.ExpectSynchronous = len(os.Getenv("EXPECT_SYNCHRONOUS")) > 0
