@@ -59,7 +59,7 @@ func startSync(w http.ResponseWriter, r *http.Request) {
 		if !getJSON(w, r, &req) {
 			return
 		}
-		log.Debugfln("Received PUT request with %+v", &req)
+		log.Debugfln("Received PUT request for appservice %s (user: %s, device: %s, address: %s, proxy: %t)", req.AppserviceID, req.UserID, req.DeviceID, req.Address, req.IsProxy)
 		req.AppserviceID = appserviceID
 		target := GetOrSetTarget(appserviceID, &req)
 		changed := true
