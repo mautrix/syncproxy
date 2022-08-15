@@ -118,8 +118,8 @@ func syncToTransaction(resp *mautrix.RespSync, userID id.UserID, deviceID id.Dev
 			txn.MSC3202DeviceLists = txn.DeviceLists
 		}
 		if sendOTKs {
-			txn.DeviceOTKCount = map[id.UserID]mautrix.OTKCount{
-				userID: resp.DeviceOTKCount,
+			txn.DeviceOTKCount = map[id.UserID]map[id.DeviceID]mautrix.OTKCount{
+				userID: {deviceID: resp.DeviceOTKCount},
 			}
 			txn.MSC3202DeviceOTKCount = txn.DeviceOTKCount
 		}
