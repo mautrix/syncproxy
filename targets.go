@@ -55,14 +55,15 @@ type SyncTarget struct {
 
 func (target *SyncTarget) Upsert() error {
 	query := `
-		INSERT INTO targets (appservice_id, bot_access_token, hs_token, address, user_id, device_id, is_proxy, next_batch, active)
+		INSERT INTO targets (
+			appservice_id, bot_access_token, hs_token, address, user_id, device_id, is_proxy, next_batch, active
+		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (appservice_id) DO UPDATE
-		SET bot_access_token=$2, hs_token=$3, address=$4, user_id=$5, device_id=$6, is_proxy=$7
+		SET bot_access_token=excluded.bot_access_token, hs_token=excluded.hs_token,
+			address=excluded.address, user_id=excluded.user_id, device_id=excluded.device_id,
+			is_proxy=excluded.is_proxy
 	`
-	if db.scheme == "sqlite3" {
-		query = "INSERT OR REPLACE INTO targets (appservice_id, bot_access_token, hs_token, address, user_id, device_id, is_proxy, next_batch, active)"
-	}
 	_, err := db.conn.Exec(query, target.AppserviceID, target.BotAccessToken, target.HSToken, target.Address, target.UserID, target.DeviceID, target.IsProxy, target.NextBatch, target.Active)
 	return err
 }
