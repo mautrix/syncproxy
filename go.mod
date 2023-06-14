@@ -7,6 +7,7 @@ require (
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/mattn/go-sqlite3 v1.14.8
 	github.com/prometheus/client_golang v1.11.0
+	gopkg.in/yaml.v2 v2.4.0
 	maunium.net/go/maulogger/v2 v2.3.0
 	maunium.net/go/mautrix v0.9.22
 )

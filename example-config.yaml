@@ -1,0 +1,6 @@
+listen_address: localhost:29332
+database_url:   postgres://user:pass@host/mautrixsyncproxy
+homeserver_url: http://localhost:8008
+shared_secret:  random string here
+debug:          true
+

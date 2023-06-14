@@ -28,7 +28,12 @@ you can build from source:
 2. Build with `go build -o mautrix-syncproxy`. The resulting executable will be
    in the current directory named `mautrix-syncproxy`.
 
-Configuring is done via environment variables.
+Configuring is done via .yaml configuration file or via environment variables.
+
+If using a configuration file, see the included example-config.yaml, and pass
+`-config CONFIGURATION_FILENAME.yaml` on the command line.
+
+If using environment variables (convenient for running syncproxy in docker):
 
 * `LISTEN_ADDRESS` - The address where to listen.
 * `HOMESERVER_URL` - The address to Synapse. If using workers, it is sufficient

@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gopkg.in/yaml.v2"
 	log "maunium.net/go/maulogger/v2"
 )
 
@@ -56,26 +58,48 @@ func getIntEnv(key string, defVal int) int {
 	return val
 }
 
-func readConfig() {
-	cfg.ListenAddress = os.Getenv("LISTEN_ADDRESS")
-	cfg.DatabaseURL = os.Getenv("DATABASE_URL")
-	cfg.DatabaseOpts.MaxOpenConns = getIntEnv("DATABASE_MAX_OPEN_CONNS", 4)
-	cfg.DatabaseOpts.MaxIdleConns = getIntEnv("DATABASE_MAX_IDLE_CONNS", 2)
-	cfg.HomeserverURL = os.Getenv("HOMESERVER_URL")
-	cfg.SharedSecret = os.Getenv("SHARED_SECRET")
-	cfg.ExpectSynchronous = len(os.Getenv("EXPECT_SYNCHRONOUS")) > 0
-	cfg.Debug = len(os.Getenv("DEBUG")) > 0
+var configPath = flag.String("config", "config.yaml", "path to config file")
 
-	if len(cfg.ListenAddress) == 0 {
-		log.Fatalln("LISTEN_ADDRESS environment variable is not set")
-	} else if len(cfg.DatabaseURL) == 0 {
-		log.Fatalln("DATABASE_URL environment variable is not set")
-	} else if len(cfg.HomeserverURL) == 0 {
-		log.Fatalln("HOMESERVER_URL environment variable is not set")
-	} else if len(cfg.SharedSecret) == 0 {
-		log.Fatalln("SHARED_SECRET environment variable is not set")
+func readConfig() {
+	flag.Parse()
+	if *configPath == "env" {
+		cfg.ListenAddress = os.Getenv("LISTEN_ADDRESS")
+		cfg.DatabaseURL = os.Getenv("DATABASE_URL")
+		cfg.DatabaseOpts.MaxOpenConns = getIntEnv("DATABASE_MAX_OPEN_CONNS", 4)
+		cfg.DatabaseOpts.MaxIdleConns = getIntEnv("DATABASE_MAX_IDLE_CONNS", 2)
+		cfg.HomeserverURL = os.Getenv("HOMESERVER_URL")
+		cfg.SharedSecret = os.Getenv("SHARED_SECRET")
+		cfg.ExpectSynchronous = len(os.Getenv("EXPECT_SYNCHRONOUS")) > 0
+		cfg.Debug = len(os.Getenv("DEBUG")) > 0
+
+		if len(cfg.ListenAddress) == 0 {
+			log.Fatalln("LISTEN_ADDRESS environment variable is not set")
+		} else if len(cfg.DatabaseURL) == 0 {
+			log.Fatalln("DATABASE_URL environment variable is not set")
+		} else if len(cfg.HomeserverURL) == 0 {
+			log.Fatalln("HOMESERVER_URL environment variable is not set")
+		} else if len(cfg.SharedSecret) == 0 {
+			log.Fatalln("SHARED_SECRET environment variable is not set")
+		} else {
+			return
+		}
 	} else {
-		return
+		file, err := os.Open(*configPath)
+		if err != nil {
+			log.Fatalln("Failed to open config:", err)
+		}
+		err = yaml.NewDecoder(file).Decode(&cfg)
+		if err != nil {
+			log.Fatalln("Failed to read config:", err)
+		} else if len(cfg.DatabaseURL) == 0 {
+			log.Fatalln("DATABASE_URL environment variable is not set")
+		} else if len(cfg.HomeserverURL) == 0 {
+			log.Fatalln("HOMESERVER_URL environment variable is not set")
+		} else if len(cfg.SharedSecret) == 0 {
+			log.Fatalln("SHARED_SECRET environment variable is not set")
+		} else {
+			return
+		}
 	}
 
 	os.Exit(2)
